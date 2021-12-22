@@ -8,8 +8,8 @@ function ProgressBar() {
 
   function switcher() {
     console.log('switcher');
-    ipcRenderer.send('loaderValueReq', 'ping');
-    ipcRenderer.on('loaderValueReply', (event, result) => {
+    ipcRenderer.send('loaderReq', 'ping');
+    ipcRenderer.on('loaderReply', (event, result) => {
       console.log('event: ', event);
       console.log('result: ', result);
       setValue(result);

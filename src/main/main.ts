@@ -16,6 +16,7 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 // import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
+import fileHandler from './components/fileHandler';
 
 export default class AppUpdater {
   constructor() {
@@ -105,70 +106,7 @@ const createWindow = async () => {
 /**
  * Add event listeners...
  */
-
-const fs = require('fs');
-const es = require('event-stream');
-
-function test(event: Electron.IpcMainEvent) {
-  // const testFile = 'rufallout_pages_full.xml';
-  const testFile = 'ruhalflife_pages_full.xml';
-  // const testFile = 'test.txt';
-
-  let lineNr = 0;
-
-  const s = fs
-    .createReadStream(testFile, { encoding: null })
-    .pipe(es.split())
-    .pipe(
-      es
-        .mapSync(function (line: any) {
-          // if (lineNr > 1000000) return;
-
-          s.pause();
-          // let count = 0;
-
-          lineNr += 1;
-
-          if ((!(lineNr % 10000) && lineNr < 100000) || !(lineNr % 100000)) {
-            const numb = lineNr.toLocaleString();
-            event.sender.send('loaderValueReply', numb);
-            console.log(numb);
-          }
-
-          s.resume();
-        })
-        .on('error', function (err: any) {
-          console.log('Error while reading file.', err);
-        })
-        .on('end', function (line: any) {
-          console.log('Read entire file.');
-          const numb = lineNr.toLocaleString();
-          event.sender.send('loaderValueReply', numb);
-        })
-    );
-}
-
-ipcMain.on('loaderValueReq', (event, arg) => {
-  if (arg === 'ping') {
-    console.log('----ping:', arg);
-    test(event);
-    // let n = 0;
-
-    // const timerTest = setInterval(() => {
-    //   n += 1;
-    //   console.log(`timerTest ${n}`);
-    //   event.sender.send('loaderValueReply', `pong ${n}`);
-    // }, 1000);
-
-    // setTimeout(() => {
-    //   clearInterval(timerTest);
-    //   console.log('stop');
-    // }, 6000);
-  } else {
-    console.log('----else:', arg);
-    event.sender.send('loaderValueReply', 'unrecognized arg');
-  }
-});
+fileHandler();
 
 app.on('window-all-closed', () => {
   // Respect the OSX convention of having the application in memory even
