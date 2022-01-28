@@ -25,19 +25,19 @@ export default function fileHandler() {
     isBusy = true;
     let lineNr = 0;
 
-
     const s = fs
       .createReadStream(testFile, { encoding: null })
       .pipe(es.split())
       .pipe(
         es
           .mapSync(function numeric(line: string) {
-            if (lineNr >= 20) return;
+            // if (lineNr >= 200000) return;
             s.pause();
             lineNr += 1;
-            // const tagInfo = xmlParser(line);
+            // console.log(line);
+            // const tagInfo = String(xmlParser(line));
 
-            if (tagInfo.length > 0) console.log(tagInfo);
+            // if (tagInfo.length > 0) console.log(tagInfo);
 
             if ((!(lineNr % 10000) && lineNr < 100000) || !(lineNr % 100000))
               sendNumb(ev, lineNr);
