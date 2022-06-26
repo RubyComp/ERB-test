@@ -10,15 +10,15 @@ function ProgressBar() {
     console.log('switcher');
     ipcRenderer.send('loaderReq', 'ping');
     ipcRenderer.on('loaderReply', (event, result) => {
-      console.log('event: ', event);
-      console.log('result: ', result);
+      // console.log('event: ', event);
+      // console.log('result: ', result);
       setValue(result);
       // resolve(result);
     });
   }
 
   return (
-    <div>
+    <div className="info">
       <Spiner />
       <h1>{value}</h1>
       <p>lines</p>

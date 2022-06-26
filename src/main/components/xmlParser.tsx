@@ -1,84 +1,172 @@
-import TagsNames from '../tagsList';
+// import tagsNames from '../tagsList';
+const tagsList = {
+  mediawiki: {
+    id: 0,
+  },
+  siteinfo: {
+    id: 1,
+  },
+  sitename: {
+    id: 3,
+  },
+  dbname: {
+    id: 4,
+  },
+  base: {
+    id: 5,
+  },
+  generator: {
+    id: 6,
+  },
+  case: {
+    id: 7,
+  },
+  namespaces: {
+    id: 8,
+  },
+  namespace: {
+    id: 9,
+  },
+  page: {
+    id: 10,
+  },
+  title: {
+    id: 11,
+  },
+  ns: {
+    id: 12,
+  },
+  id: {
+    id: 13,
+  },
+  revision: {
+    id: 14,
+  },
+  timestamp: {
+    id: 15,
+  },
+  contributor: {
+    id: 16,
+  },
+  username: {
+    id: 17,
+  },
+  ip: {
+    id: 18,
+  },
+  model: {
+    id: 19,
+  },
+  minor: {
+    id: 20,
+  },
+  comment: {
+    id: 21,
+  },
+  format: {
+    id: 22,
+  },
+  text: {
+    id: 23,
+  },
+  sha1: {
+    id: 24,
+  },
+  parentid: {
+    id: 25,
+  },
+  redirect: {
+    id: 26,
+  },
+  origin: {
+    id: 27,
+  },
+};
 
-console.log('xmlParser');
-
-export default function xmlParser(line: string) {
-  // const re = /<\s?(\/?)(\w*)(\s(.*=".*")*)?\s?(\/?)\s?>/g;
-  // const found = [...line.matchAll(re)];
-
-  // console.log(TagsNames);
+interface XMLTag {
+  nameId: number | -1;
   /*
-  function getKeyByValue(object: {
-      name: number;
-      closed: number;
-      pos: number;
-    }[], value: string) {
-    return Object.keys(object).find((key) => object[key] === value);
-  }
+   * Types:
+   * — standalone: -1
+   * — open: 0
+   * — close: 1
+   */
+  type: number;
+  pos: {
+    start: number;
+    tagLength: number;
+  };
+  attrs: string;
+  cashedName: string;
+}
+// console.log(tagsNames);
 
-  const tagsList: {
-    name: number;
-    closed: number; // -1: standalone, 0: open, 1: close
-    pos: number;
-  }[] = [];
-
-  found.forEach(function parseTag(tag) {
-    const tagName = getKeyByValue(tagsList, tag[2]) || -1;
-    let type = 0;
-    // const tagIndex = tag.index;
-    const tagIndex: number = tag.index || 0;
-    if (tag[1].length > 0) {
-      type = 1;
-    } else if (tag[5].length > 0) {
-      type = -1;
-    }
-    const tagInfo = {
-      name: tagName,
-      closed: type, // -1: standalone, 0: open, 1: close
-      pos: tagIndex,
-    };
-    tagsList.push(tagInfo);
-    // console.log(tagInfo);
-  });
-  return tagsList;
-  // console.log('line: ', line); */
+function getTagId(list: object, value: string) {
+  return list[value].id;
 }
 
-// all tags
-// <(/|)\b(|.*?)>
+export default function xmlParser(line: string, lineNr: number) {
+  /**
+   * Take some XML line and return list of tags
+   */
+  const tagsInfo: XMLTag[] = [];
 
-//
+  if (line.length !== 0) {
+    // const checkUnclosedTag = /<.*[^>]\n/g;
+    // const unclosedFounded = [...line.matchAll(checkUnclosedTag)];
 
-// const tagsList = [
-//   'base',
-//   'case',
-//   'comment',
-//   'contributor',
-//   'dbname',
-//   'generator',
-//   'ip',
-//   'mediawiki',
-//   'minor',
-//   'namespace',
-//   'namespaces',
-//   'page',
-//   'restrictions',
-//   'revision',
-//   'siteinfo',
-//   'sitename',
-//   'text',
-//   'timestamp',
-//   'title',
-//   'username',
-// ];
+    // console.log('--------------');
+    // console.log(unclosedFounded);
 
-// let example = [
-//   {
-//     tagname: 'revision',
-//     type: '0', // -1: standalone, 0: open, 1: closed
-//     pos: {
-//       start: 12,
-//       end: 16,
-//     },
-//   },
-// ];
+    // if (unclosedFounded.length) {
+    //   console.error(`XML parser error at line ${lineNr}`);
+    // }
+
+    const regFindAnyTag = /<\s?(\/?)(\w*)(\s(.*=".*")*)?\s?(\/?)\s?>/g;
+    const founded = [...line.matchAll(regFindAnyTag)];
+
+    founded.forEach(function parseTag(tag) {
+      const tagNameId = getTagId(tagsList, tag[2]);
+
+      let type: number;
+
+      if (tag[1].length > 0) {
+        type = 1;
+      } else if (tag[5].length > 0) {
+        type = -1;
+      } else {
+        type = 0;
+      }
+
+      // type AttrsList = Record<string, string>;
+
+      // let attrs: AttrsList = {};
+
+      const tagInfo: XMLTag = {
+        nameId: tagNameId || -1,
+        type, // -1: standalone, 0: open, 1: closed
+        pos: {
+          start: tag.index || -1,
+          tagLength: tag[0].length,
+        },
+        // attrs: tag[4],
+        attrs: '',
+        cashedName: tag[2],
+      };
+
+      // if (tagNameId === '9' && type === 0) {
+      //   const regFindAttrs = /(([a-zA-Z]*)="(.*?)")/g;
+      //   const tagAttrs: string = tagInfo[0].attrs || '';
+      //   const attrsData = [...tagAttrs.matchAll(regFindAttrs)];
+
+      //   attrsData.forEach((attr) => {
+      //     attrs.attr[2] = attr[3];
+      //   });
+      // }
+
+      tagsInfo.push(tagInfo);
+    });
+  }
+
+  return tagsInfo;
+}
