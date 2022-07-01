@@ -1,86 +1,51 @@
 import console from 'console';
 import { ipcMain } from 'electron';
-// import sqlite3 from 'sqlite3';
 import xmlParser from './xmlParser';
+// import sqlite3 from 'sqlite3';
 // import TagsNames from '../tagsList';
 
 const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
 const es = require('event-stream');
 
-console.log('fileHandler');
-
-// const testFile = 'rufallout_pages_full.xml';
-const testFile = 'ruhalflife_pages_full.xml';
-// const testFile = 'rufallouttest_pages_full.xml';
-
-// const testFile = 'rumlp_pages_full.xml';
-
-// const testFile = 'test.txt';
-// const startRow = 0;
-const maxRows = 0;
-
-const tableName = 'edits';
-const tableNamePrefix = 'HL';
-const tableNameFull = tableName + tableNamePrefix;
-
-let isBusy = false;
-
-interface Revision {
-  revId: number | -1;
-  pageId: number | -1;
-  row: number | -1;
-  time: string | '';
-  user: number | 1;
-  cashedTitle: string | '';
-  cashedUser: string | '';
-}
-
 export default function fileHandler() {
+  console.log('fileHandler');
+
+  // const testFile = 'rufallout_pages_full.xml';
+  const testFile = 'ruhalflife_pages_full.xml';
+  // const testFile = 'rufallouttest_pages_full.xml';
+  // const testFile = 'rumlp_pages_full.xml';
+
+  // const testFile = 'test.txt';
+  // const startRow = 0;
+  const maxRows = 10;
+
+  const tableName = 'edits';
+  const tableNamePrefix = 'HL';
+  const tableNameFull = tableName + tableNamePrefix;
+
   const db = new sqlite3.Database('test.sqlite3');
 
-  try {
-    db.run(`DROP TABLE IF EXISTS ${tableNameFull}`);
-    // db.run(
-    //   `CREATE TABLE IF NOT EXISTS ${tableNameFull} (key INTEGER PRIMARY KEY, row TEXT NOT NULL, revId TEXT NOT NULL, pageId TEXT NOT NULL, time TEXT NOT NULL, user TEXT NOT NULL, cashedTitle TEXT NOT NULL, cashedUser TEXT NOT NULL)`,
+  let ipcEvent: Electron.IpcMainEvent;
+  let isBusy = false;
+  let readInited = false;
 
-    // );
+  let lineNr = 0;
+  let pageTitle = 'TEST Title not init';
 
-    db.run(
-      `CREATE TABLE IF NOT EXISTS ${tableNameFull} (key INTEGER PRIMARY KEY, row TEXT NOT NULL, revId TEXT NOT NULL, pageId TEXT NOT NULL, time TEXT NOT NULL, user TEXT NOT NULL, cashedTitle TEXT NOT NULL, cashedUser TEXT NOT NULL)`,
-      () => {
-        console.log('Test1');
-      }
-    );
-  } catch (error) {
-    console.log('initTable error');
+  interface Revision {
+    revId: number | -1;
+    pageId: number | -1;
+    row: number | -1;
+    time: string | '';
+    user: number | 1;
+    cashedTitle: string | '';
+    cashedUser: string | '';
   }
 
-  function addValue(val: Revision) {
-    // const stmt = db.prepare(`INSERT INTO edits (time) VALUES ('${val}')`);
-    // const stmt = db.prepare(`INSERT INTO edits (time) VALUES (888)`);
-    // console.log(val);
-    try {
-      // db.run(
-      //   `INSERT INTO ${tableNameFull} (revId, pageId, row, time, user, cashedTitle, cashedUser) VALUES (${val.revId}, ${val.pageId}, ${val.row}, '${val.time}', '${val.user}', '${val.cashedTitle}', '${val.cashedUser}')`
-      // );
-
-      db.run(
-        `INSERT INTO ${tableNameFull} (revId, pageId, row, time, user, cashedTitle, cashedUser) VALUES (${val.revId}, ${val.pageId}, ${val.row}, '${val.time}', '${val.user}', '${val.cashedTitle}', '${val.cashedUser}')`,
-        () => {
-          console.log('Test');
-        }
-      );
-    } catch (error) {
-      console.log('initTable error');
-    }
-    // stmt.finalize();
-  }
-
-  function finish() {
-    db.close();
-    isBusy = false;
-    console.log('Finish.');
+  function readNext() {
+    lineNr += 1;
+    console.log(`Next ${lineNr}`);
   }
 
   function sendToGUI(event: any, value: any) {
@@ -88,120 +53,152 @@ export default function fileHandler() {
     // console.log('Send: ', value);
     event.sender.send('loaderReply', text);
   }
+  function finish() {
+    db.close();
+    isBusy = false;
+    console.log('Finish.');
+  }
 
-  function fileReader(ev: Electron.IpcMainEvent) {
-    let lineNr = 0;
-    let pageTitle = 'TEST Title not init';
+  function addValue(val: Revision, callback: any) {
+    try {
+      db.run(
+        `INSERT INTO ${tableNameFull} (revId, pageId, row, time, user, cashedTitle, cashedUser) VALUES (${val.revId}, ${val.pageId}, ${val.row}, '${val.time}', '${val.user}', '${val.cashedTitle}', '${val.cashedUser}')`,
+      );
+    } catch (error) {
+      console.log('initTable error');
+    }
+    // stmt.finalize();
+  }
+
+  function processLine(s: any) {
+    if ((!(lineNr % 10000) && lineNr < 10000) || !(lineNr % 1000)) {
+      sendToGUI(ipcEvent, lineNr);
+    }
+    s.pause();
+    console.log('processLine');
+
+    // setTimeout(() => {
+    //   console.log('Timeout');
+    // }, 1000);
+  }
+
+  function fileReader() {
     // let parentTagId = -1;
     let revData: Revision;
+    console.log('fileReader-1');
 
     const s = fs
       .createReadStream(testFile, { encoding: null })
       .pipe(es.split())
       .pipe(
         es
-          .mapSync(function numeric(line: string) {
+          .mapSync((line: any) => {
+            s.pause();
+            lineNr += 1;
+
+            console.log(lineNr);
             if (maxRows > 0 && lineNr >= maxRows) {
               console.log(`Max rows limit (${maxRows}) reached.`);
               s.destroy();
             } else {
-              lineNr += 1;
-              // parentTagId =
-
+              // // parentTagId =
+              // console.log(line);
               s.pause();
+              setTimeout(() => {
+                console.log('Timeout');
+              }, 2000);
+              processLine(s);
+              // s.resume();
+              // console.log(`Pause`);
 
-              if ((!(lineNr % 10000) && lineNr < 10000) || !(lineNr % 1000)) {
-                sendToGUI(ev, lineNr);
-              }
+              // // const tagInfo = String(xmlParser(line));
+              // const tagInfo = xmlParser(line, lineNr);
+              // // console.log(tagInfo);
 
-              // const tagInfo = String(xmlParser(line));
-              const tagInfo = xmlParser(line, lineNr);
-              // console.log(tagInfo);
+              // if (tagInfo.length) {
+              //   const firstTagId = tagInfo[0].nameId;
 
-              if (tagInfo.length) {
-                const firstTagId = tagInfo[0].nameId;
+              //   /*
+              //    * Entrance to <page>
+              //    */
+              //   if (firstTagId === 10) {
+              //     pageTitle = 'TEST Title cleared';
+              //     // pageId = -1;
+              //   }
 
-                /*
-                 * Entrance to <page>
-                 */
-                if (firstTagId === 10) {
-                  pageTitle = 'TEST Title cleared';
-                  // pageId = -1;
-                }
+              //   /*
+              //    * Entrance to <revision>
+              //    */
+              //   if (firstTagId === 14 && tagInfo[0].type === 0) {
+              //     revData = {
+              //       revId: -1,
+              //       pageId: -1,
+              //       row: -1,
+              //       time: '',
+              //       user: -1,
+              //       cashedTitle: pageTitle,
+              //       cashedUser: '',
+              //     };
+              //   }
 
-                /*
-                 * Entrance to <revision>
-                 */
-                if (firstTagId === 14 && tagInfo[0].type === 0) {
-                  revData = {
-                    revId: -1,
-                    pageId: -1,
-                    row: -1,
-                    time: '',
-                    user: -1,
-                    cashedTitle: pageTitle,
-                    cashedUser: '',
-                  };
-                }
+              //   /*
+              //    * Exit from <revision> and send rev
+              //    */
+              //   if (firstTagId === 14 && tagInfo[0].type === 1) {
+              //     revData.row = lineNr;
+              //     addValue(revData);
+              //   }
 
-                /*
-                 * Exit from <revision> and send rev
-                 */
-                if (firstTagId === 14 && tagInfo[0].type === 1) {
-                  revData.row = lineNr;
-                  addValue(revData);
-                }
+              //   /*
+              //    * Simple case with only single tag
+              //    */
+              //   if (
+              //     tagInfo &&
+              //     tagInfo.length === 2 &&
+              //     firstTagId === tagInfo[1].nameId
+              //   ) {
+              //     const tagContent = {
+              //       pos: {
+              //         start: tagInfo[0].pos.start + tagInfo[0].pos.tagLength,
+              //         end: tagInfo[1].pos.start,
+              //       },
+              //       text: '',
+              //     };
+              //     tagContent.text = line.substring(
+              //       tagContent.pos.start,
+              //       tagContent.pos.end
+              //     );
 
-                /*
-                 * Simple case with only single tag
-                 */
-                if (
-                  tagInfo &&
-                  tagInfo.length === 2 &&
-                  firstTagId === tagInfo[1].nameId
-                ) {
-                  const tagContent = {
-                    pos: {
-                      start: tagInfo[0].pos.start + tagInfo[0].pos.tagLength,
-                      end: tagInfo[1].pos.start,
-                    },
-                    text: '',
-                  };
-                  tagContent.text = line.substring(
-                    tagContent.pos.start,
-                    tagContent.pos.end
-                  );
+              //     switch (firstTagId) {
+              //       case 11:
+              //         /*
+              //          * <title>
+              //          */
+              //         pageTitle = tagContent.text;
+              //         break;
 
-                  switch (firstTagId) {
-                    case 11:
-                      /*
-                       * <title>
-                       */
-                      pageTitle = tagContent.text;
-                      break;
+              //       case 15:
+              //         /*
+              //          * <timestamp>
+              //          */
+              //         revData.time = tagContent.text;
+              //         break;
 
-                    case 15:
-                      /*
-                       * <timestamp>
-                       */
-                      revData.time = tagContent.text;
-                      break;
+              //       case 17:
+              //       case 18:
+              //         /*
+              //          * <username>
+              //          * or
+              //          * <ip>
+              //          */
+              //         revData.cashedUser = tagContent.text;
+              //         break;
 
-                    case 17:
-                    case 18:
-                      /*
-                       * <username>
-                       * or
-                       * <ip>
-                       */
-                      revData.cashedUser = tagContent.text;
-                      break;
-
-                    default:
-                      break;
-                  }
-                }
-              }
+              //       default:
+              //         break;
+              //     }
+              //   }
+              // }
             }
             //   const tagNameId = tagInfo[0].nameId;
 
@@ -260,17 +257,53 @@ export default function fileHandler() {
             console.error('Error while reading file.', err);
           })
           .on('end', function readingEnd(line: any) {
-            sendToGUI(ev, lineNr);
+            sendToGUI(ipcEvent, lineNr);
             finish();
           })
       );
+  }
+
+  function createTable() {
+    db.run(
+      `CREATE TABLE IF NOT EXISTS ${tableNameFull} (key INTEGER PRIMARY KEY, row TEXT NOT NULL, revId TEXT NOT NULL, pageId TEXT NOT NULL, time TEXT NOT NULL, user TEXT NOT NULL, cashedTitle TEXT NOT NULL, cashedUser TEXT NOT NULL)`,
+      () => {
+        console.log('Table was created');
+        fileReader();
+      }
+    );
+  }
+  function clearTable(next: any) {
+    db.run(`DROP TABLE IF EXISTS ${tableNameFull}`, () => {
+      console.log('Table was cleared');
+      next();
+    });
+  }
+
+  function initTable() {
+    try {
+      clearTable(createTable);
+    } catch (error) {
+      console.log('initTable error');
+    }
+  }
+
+  function initRead() {
+    console.log('initRead');
+    if (readInited) {
+      console.log('Reader is already started.');
+    } else {
+      console.log('Reading...');
+      readInited = true;
+      initTable();
+    }
   }
 
   ipcMain.on('loaderReq', (event, arg) => {
     if (isBusy) return;
     if (arg === 'ping') {
       console.log('----ping:', arg);
-      fileReader(event);
+      ipcEvent = event;
+      initRead();
     } else {
       console.log('----else:', arg);
       event.sender.send('loaderReply', 'unrecognized arg');
