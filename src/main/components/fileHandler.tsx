@@ -7,13 +7,16 @@ import xmlParser from './xmlParser';
 const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
 const es = require('event-stream');
+const readline = require('readline');
+
+// const readline = require('linebyline');
 
 export default function fileHandler() {
   console.log('fileHandler');
 
   // const testFile = 'rufallout_pages_full.xml';
-  const testFile = 'ruhalflife_pages_full.xml';
-  // const testFile = 'rufallouttest_pages_full.xml';
+  // const testFile = 'ruhalflife_pages_full.xml';
+  const testFile = 'rufallouttest_pages_full.xml';
   // const testFile = 'rumlp_pages_full.xml';
 
   // const testFile = 'test.txt';
@@ -42,6 +45,63 @@ export default function fileHandler() {
     cashedTitle: string | '';
     cashedUser: string | '';
   }
+
+  // function awaw() {
+  //   setTimeout(() => {
+  //     console.log('awaw');
+  //     return true;
+  //   }, 2000);
+  // }
+
+  // const promise1 = new Promise((resolve, reject) => {
+  //   setTimeout(() => {
+  //     resolve('foo');
+  //   }, 10000);
+  // });
+
+  // promise1
+  //   .then((value) => {
+  //     console.log(value);
+  //     return true;
+  //   })
+  //   .catch(errr);
+
+  async function processLineByLine() {
+    // console.log(promise1);
+
+    const fileStream = fs.createReadStream(testFile);
+
+    const rl = readline.createInterface({
+      input: fileStream,
+      crlfDelay: Infinity,
+    });
+    // Note: we use the crlfDelay option to recognize all instances of CR LF
+    // ('\r\n') in input.txt as a single line break.
+
+    // eslint-disable-next-line no-restricted-syntax
+
+    console.log('-----------------');
+    console.log(`rl: ${rl}`);
+    console.log('-----------------');
+
+    // eslint-disable-next-line no-restricted-syntax
+    for await (const line of rl) {
+      lineNr += 1;
+      console.log(`Line from file: ${lineNr}: ${line}`);
+
+      fileStream.pause();
+      // await awaw();
+      // fileStream.pause();
+      // if (lineNr === 10)
+      // if (lineNr > 30) fileStream.destroy();
+      // setTimeout(() => {
+      //   fileStream.pause();
+      //   console.log(222);
+      // }, 2000);
+    }
+  }
+
+  processLineByLine();
 
   function readNext() {
     lineNr += 1;
@@ -104,9 +164,9 @@ export default function fileHandler() {
               // // parentTagId =
               // console.log(line);
               s.pause();
-              setTimeout(() => {
-                console.log('Timeout');
-              }, 2000);
+              // setTimeout(() => {
+              //   console.log('Timeout');
+              // }, 2000);
               processLine(s);
               // s.resume();
               // console.log(`Pause`);
